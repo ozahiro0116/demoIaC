@@ -1,0 +1,55 @@
+name: Bicep CD — Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/bicep-cd.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: rg-web-sql-dev-eus2
+  LOCATION: eastus2
+  TEMPLATE_FILE: infra/main-web-sql.bicep
+  PARAMETERS_FILE: infra/parameters/web-sql-dev.bicepparam
+
+jobs:
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Ensure Resource Group
+        run: |
+          az group create \
+            --name ${{ env.RESOURCE_GROUP }} \
+            --location ${{ env.LOCATION }} \
+            --tags environment=dev project=web-sql-app
+
+      - name: Deploy Bicep
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file ${{ env.TEMPLATE_FILE }} \
+            --parameters ${{ env.PARAMETERS_FILE }} \
+            --name "deploy-$(date +%Y%m%d%H%M)"
+
+      - name: Show Outputs
+        run: |
+          az deployment group list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "[0].{name:name, state:properties.provisioningState, timestamp:properties.timestamp}" \
+            -o table

@@ -1,0 +1,81 @@
+name: Bicep CI — Lint, Validate, What-If
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/bicep-ci.yml'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  RESOURCE_GROUP: rg-web-sql-dev-eus2
+  LOCATION: eastus2
+  TEMPLATE_FILE: infra/main-web-sql.bicep
+  PARAMETERS_FILE: infra/parameters/web-sql-dev.bicepparam
+
+jobs:
+  lint:
+    name: Bicep Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bicep Lint
+        run: az bicep lint --file ${{ env.TEMPLATE_FILE }}
+
+  validate:
+    name: Validate & What-If
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Deployment
+        run: |
+          az deployment group validate \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file ${{ env.TEMPLATE_FILE }} \
+            --parameters ${{ env.PARAMETERS_FILE }}
+
+      - name: What-If Preview
+        id: whatif
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file ${{ env.TEMPLATE_FILE }} \
+            --parameters ${{ env.PARAMETERS_FILE }} \
+            --no-pretty-print > whatif-output.txt 2>&1 || true
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          head -c 60000 whatif-output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post What-If to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let whatif = '';
+            try {
+              whatif = fs.readFileSync('whatif-output.txt', 'utf8');
+            } catch (e) {
+              whatif = 'What-If output not available';
+            }
+            const body = `## 🔍 Bicep What-If Results\n\n\`\`\`\n${whatif.slice(0, 60000)}\n\`\`\``;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });

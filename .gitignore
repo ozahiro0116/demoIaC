@@ -1,0 +1,21 @@
+# Azure / Bicep
+*.tmp
+*.log
+.env*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Bicep compiled output (if any)
+*.json
+!infra/bicepconfig.json
+!package.json
+
+# Terraform (if future migration)
+.terraform/
+*.tfstate*
