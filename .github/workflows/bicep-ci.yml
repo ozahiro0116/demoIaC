@@ -50,16 +50,12 @@ jobs:
             --parameters ${{ env.PARAMETERS_FILE }}
 
       - name: What-If Preview
-        id: whatif
         run: |
           az deployment group what-if \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --template-file ${{ env.TEMPLATE_FILE }} \
             --parameters ${{ env.PARAMETERS_FILE }} \
             --no-pretty-print > whatif-output.txt 2>&1 || true
-          echo "output<<EOF" >> $GITHUB_OUTPUT
-          head -c 60000 whatif-output.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Post What-If to PR
         uses: actions/github-script@v7
