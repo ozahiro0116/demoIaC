@@ -47,9 +47,35 @@ jobs:
             --parameters ${{ env.PARAMETERS_FILE }} \
             --name "deploy-$(date +%Y%m%d%H%M)"
 
-      - name: Show Outputs
+      - name: Show Deployment Summary
         run: |
-          az deployment group list \
+          DEPLOY_NAME=$(az deployment group list \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --query "[0].{name:name, state:properties.provisioningState, timestamp:properties.timestamp}" \
+            --query "[0].name" -o tsv)
+
+          echo "### 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name "$DEPLOY_NAME" \
+            --query "{Status:properties.provisioningState, Timestamp:properties.timestamp}" \
             -o table
+
+          echo "| Output | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+
+          OUTPUTS=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name "$DEPLOY_NAME" \
+            --query "properties.outputs" -o json)
+
+          WEBAPP=$(echo "$OUTPUTS" | jq -r '.webAppDefaultHostname.value // empty')
+          SQL=$(echo "$OUTPUTS" | jq -r '.sqlServerFqdn.value // empty')
+          RG=$(echo "$OUTPUTS" | jq -r '.resourceGroupName.value // empty')
+
+          [ -n "$WEBAPP" ] && echo "| Web App URL | https://$WEBAPP |" >> $GITHUB_STEP_SUMMARY
+          [ -n "$SQL" ] && echo "| SQL Server FQDN | $SQL |" >> $GITHUB_STEP_SUMMARY
+          [ -n "$RG" ] && echo "| Resource Group | $RG |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment **$DEPLOY_NAME** completed successfully." >> $GITHUB_STEP_SUMMARY
