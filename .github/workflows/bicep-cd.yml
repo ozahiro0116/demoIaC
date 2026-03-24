@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'infra/**'
-      - '.github/workflows/bicep-cd.yml'
+      - '.github/workflows/**'
 
 permissions:
   id-token: write
