@@ -168,7 +168,7 @@ output sqlDatabaseName string = sqlDatabaseName
 output privateEndpointId string = privateEndpoint.outputs.resourceId
 
 @description('Private Endpoint private IP')
-output privateEndpointIp string = privateEndpoint.outputs.customDnsConfigs[0].ipAddresses[0]
+output privateEndpointIp string = length(privateEndpoint.outputs.customDnsConfigs) > 0 ? privateEndpoint.outputs.customDnsConfigs[0].ipAddresses[0] : ''
 
 @description('Private DNS Zone resource ID')
 output privateDnsZoneId string = privateDnsZone.outputs.resourceId
