@@ -107,6 +107,7 @@ module appService 'modules/app-service.bicep' = {
     appServicePlanSkuName: appServicePlanSkuName
     appServiceSubnetId: network.outputs.appServiceSubnetId
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
+    sqlServerFqdn: sqlDatabase.outputs.sqlServerFqdn
     logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
     tags: tags
   }
