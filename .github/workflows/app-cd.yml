@@ -1,0 +1,75 @@
+# サンプルアプリ (sre-agent-demo/app) の CI/CD。
+# - CI : PR で dotnet build（壊れた変更を main に入れない）
+# - CD : main 反映 or 手動実行で Web App にデプロイ
+# インフラ CD (bicep-cd.yml) とは独立。アプリのソースを更新したいとき用。
+name: App CI/CD — Build & Deploy sample app
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sre-agent-demo/app/**'
+      - '.github/workflows/app-cd.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sre-agent-demo/app/**'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  WEBAPP_NAME: app-web-sql-dev-eus2
+  APP_DIR: sre-agent-demo/app
+
+jobs:
+  build:
+    name: Build (CI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore & Build
+        run: dotnet build ${{ env.APP_DIR }} -c Release --nologo
+
+      - name: Publish artifact
+        run: dotnet publish ${{ env.APP_DIR }} -c Release -o ${{ runner.temp }}/publish --nologo
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-package
+          path: ${{ runner.temp }}/publish
+
+  deploy:
+    name: Deploy (CD)
+    needs: build
+    # PR では deploy しない。main への push か手動実行のみ。
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-package
+          path: ${{ runner.temp }}/publish
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.WEBAPP_NAME }}
+          package: ${{ runner.temp }}/publish
