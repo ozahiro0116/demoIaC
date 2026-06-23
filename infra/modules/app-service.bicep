@@ -22,6 +22,9 @@ param appServiceSubnetId string
 @description('Application Insights connection string')
 param appInsightsConnectionString string
 
+@description('SQL Server FQDN (used by app health check)')
+param sqlServerFqdn string
+
 @description('Log Analytics Workspace resource ID for diagnostic settings')
 param logAnalyticsWorkspaceId string
 
@@ -69,10 +72,23 @@ module webApp 'br/public:avm/res/web/site:0.22.0' = {
     virtualNetworkSubnetResourceId: appServiceSubnetId
     siteConfig: {
       netFrameworkVersion: 'v8.0'
+      healthCheckPath: '/health'
       appSettings: [
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
           value: appInsightsConnectionString
+        }
+        {
+          name: 'SQL_SERVER_FQDN'
+          value: sqlServerFqdn
+        }
+        {
+          name: 'SQL_PORT'
+          value: '1433'
+        }
+        {
+          name: 'HEALTH_TIMEOUT_MS'
+          value: '5000'
         }
       ]
     }
