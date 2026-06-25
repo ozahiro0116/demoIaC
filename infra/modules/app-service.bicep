@@ -73,6 +73,7 @@ module webApp 'br/public:avm/res/web/site:0.22.0' = {
     siteConfig: {
       netFrameworkVersion: 'v8.0'
       healthCheckPath: '/health'
+      vnetRouteAllEnabled: true
       appSettings: [
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -89,6 +90,14 @@ module webApp 'br/public:avm/res/web/site:0.22.0' = {
         {
           name: 'HEALTH_TIMEOUT_MS'
           value: '5000'
+        }
+        {
+          name: 'WEBSITE_DNS_SERVER'
+          value: '168.63.129.16'
+        }
+        {
+          name: 'WEBSITE_VNET_ROUTE_ALL'
+          value: '1'
         }
       ]
     }
