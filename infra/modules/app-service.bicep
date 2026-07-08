@@ -72,6 +72,7 @@ module webApp 'br/public:avm/res/web/site:0.22.0' = {
     virtualNetworkSubnetResourceId: appServiceSubnetId
     siteConfig: {
       netFrameworkVersion: 'v8.0'
+      alwaysOn: true
       healthCheckPath: '/health'
       vnetRouteAllEnabled: true
       appSettings: [
